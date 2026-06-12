@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bullet Journal con Pagos</title>
+    <style>
+        :root {
+            --bg: #f5f5f7;
+            --card: #ffffff;
+            --text: #1d1d1f;
+            --accent: #6f42c1;
+            --accent-light: #e9d5ff;
+            --border: #e5e5ea;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --danger: #dc3545;
+            --success: #28a745;
+            --warning: #ffc107;
+            --overdue: #ffe0e0;
+            --today: #fff3cd;
+        }
+        body.dark {
+            --bg: #1c1c1e;
+            --card: #2c2c2e;
+            --text: #f5f5f7;
+            --border: #48484a;
+            --overdue: #4a1c1c;
+            --today: #4a3d1c;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 1rem;
+            max-width: 900px;
+            margin: 0 auto;
+            transition: background 0.3s, color 0.3s;
+            padding-bottom: 80px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        h1 { font-size: 1.5rem; }
+        button, .btn, select {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--card);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            font-family: inherit;
+        }
+        button:hover, .btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        .btn.active { background: var(--accent); color: white; }
+        nav { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .view { display: none; animation: fadeIn 0.2s; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .card {
+            background: var(--card);
+            padding: 1.2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem;
+        }
+        textarea, input[type="text"], input[type="date"], input[type="search"], input[type="datetime-local"], input[type="time"], input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: var(--bg);
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            font-family: inherit;
+            resize: vertical;
+        }
+        .entry-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            padding: 0.6rem;
+            border-bottom: 1px solid var(--border);
+            transition: 0.2s;
+            border-radius: 8px;
+            margin-bottom: 0.2rem;
+        }
+        .entry-row:last-child { border-bottom: none; }
+        .entry-row:hover { background: var(--bg); }
+        .entry-row.overdue { background: var(--overdue); }
+        .entry-row.due-today { background: var(--today); }
+        .entry-row.paid { opacity: 0.6; }
+        .entry-row.recurring { border-left: 3px solid var(--accent); }
+        .entry-text { flex: 1; word-break: break-word; }
+        .entry-text.done { text-decoration: line-through; opacity: 0.5; }
+        .bullet-icon {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0; font-weight: bold;
+            border: 2px solid var(--accent); color: var(--accent);
+        }
+        .bullet-icon.done { background: var(--success); color: white; border-color: var(--success); }
+        .bullet-icon.priority { border-color: var(--danger); color: var(--danger); }
+        .bullet-icon.event { border-color: #0d6efd; color: #0d6efd; }
+        .bullet-icon.note { border-color: var(--text); color: var(--text); }
+        .delete-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.2rem; padding: 0 0.3rem; }
+        .migrate-btn { background: none; border: none; color: var(--warning); cursor: pointer; font-size: 1rem; }
+        .habit-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .habit-days { display: flex; gap: 4px; }
+        .habit-day {
+            width: 24px; height: 24px; border: 1px solid var(--border); border-radius: 6px;
+            display: flex; align-items: center; justify-content: center; font-size: 0.7rem;
+            cursor: pointer; background: var(--card);
+        }
+        .habit-day.checked { background: var(--accent); color: white; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        .cal-day { padding: 0.5rem; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .cal-day:hover { background: var(--accent-light); }
+        .cal-day.today { background: var(--accent); color: white; font-weight: bold; }
+        .cal-day.has-entries { border: 2px solid var(--accent); }
+        .footer { text-align: center; margin-top: 2rem; font-size: 0.8rem; opacity: 0.7; }
+        .install-btn { background: var(--accent); color: white; border: none; display: none; }
+        .search-box { position: relative; margin-bottom: 1rem; }
+        .search-box input { padding-left: 2.5rem; }
+        .search-box span { position: absolute; left: 0.8rem; top: 0.7rem; }
+        .toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--text); color: var(--bg); padding: 0.75rem 1.5rem;
+            border-radius: 20px; z-index: 999; animation: slideUp 0.3s;
+        }
+        @keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+        .due-info { font-size: 0.75rem; opacity: 0.8; white-space: nowrap; }
+        .due-info.overdue { color: var(--danger); font-weight: bold; }
+        .recurring-info { font-size: 0.7rem; opacity: 0.8; color: var(--accent); white-space: nowrap; }
+        .inline-form { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+        .inline-form label { font-size: 0.85rem; }
+        .inline-form select, .inline-form input[type="number"] { width: auto; }
+        .modal { display: none; position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.open { display: flex; }
+        .modal-content { background: var(--card); padding: 2rem; border-radius: 16px; max-width: 500px; width: 90%; }
+        .advanced-options { display: none; margin-top: 0.5rem; }
+        .advanced-options.visible { display: block; }
+        .payment-summary { display: flex; gap: 1rem; margin-bottom: 1rem; }
+        .payment-summary .summary-item { flex: 1; text-align: center; padding: 0.5rem; border-radius: 8px; }
+        .payment-summary .summary-item.paid-summary { background: #d4edda; }
+        .payment-summary .summary-item.pending-summary { background: #fff3cd; }
+        .payment-summary .summary-item.overdue-summary { background: #ffe0e0; }
+        .dark .payment-summary .summary-item.paid-summary { background: #1a3d2a; }
+        .dark .payment-summary .summary-item.pending-summary { background: #4a3d1c; }
+        .dark .payment-summary .summary-item.overdue-summary { background: #4a1c1c; }
+        @media (max-width: 500px) {
+            nav button { font-size: 0.8rem; padding: 0.4rem 0.7rem; }
+            .entry-row { flex-wrap: wrap; }
+            .inline-form { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>📓 Bullet Journal</h1>
+    <div>
+        <button id="cloudUpBtn" title="Subir a la nube">☁️↑</button>
+        <button id="cloudDownBtn" title="Descargar de la nube">☁️↓</button>
+        <button id="exportBtn" title="Respaldo archivo">📤</button>
+        <button id="importBtn" title="Restaurar archivo">📥</button>
+        <button id="settingsBtn" title="Configurar nube">⚙️</button>
+        <button id="themeToggle">🌓</button>
+        <button id="installBtn" class="install-btn">📲 Instalar</button>
+    </div>
+</header>
+
+<!-- Modal de configuración de nube -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <h3>Configurar copia en la nube</h3>
+        <p><small>Usa JSONBin.io (gratis). <a href="https://jsonbin.io" target="_blank">Crear cuenta</a></small></p>
+        <label>API Key:</label>
+        <input type="text" id="apiKeyInput" placeholder="Pega aquí tu API Key">
+        <label>Bin ID:</label>
+        <input type="text" id="binIdInput" placeholder="Pega aquí el Bin ID">
+        <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+            <button id="saveSettingsBtn" class="btn">Guardar configuración</button>
+            <button id="closeSettingsBtn" class="btn">Cancelar</button>
+        </div>
+        <p id="cloudStatus" style="margin-top:0.5rem; font-size:0.8rem;"></p>
+    </div>
+</div>
+
+<div class="search-box">
+    <span>🔍</span>
+    <input type="search" id="searchInput" placeholder="Buscar en todo tu journal...">
+</div>
+<div id="searchResults" class="card" style="display:none;"></div>
+
+<nav>
+    <button class="btn active" data-view="daily">📅 Diario</button>
+    <button class="btn" data-view="monthly">📆 Calendario</button>
+    <button class="btn" data-view="future">🔮 Futuro</button>
+    <button class="btn" data-view="payments">💳 Pagos</button>
+    <button class="btn" data-view="habits">✅ Hábitos</button>
+    <button class="btn" data-view="collections">📚 Colecciones</button>
+</nav>
+
+<!-- DIARIO (sin cambios respecto a la versión anterior, pero incluido completo) -->
+<div id="dailyView" class="view active">
+    <div class="card">
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            <input type="date" id="selectedDate" style="flex:1;">
+            <button id="prevDay">◀</button>
+            <button id="todayBtn">Hoy</button>
+            <button id="nextDay">▶</button>
+        </div>
+        <textarea id="newEntry" placeholder="Escribe aquí tu tarea, evento, nota..." rows="2"></textarea>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+            <button class="btn type-btn" data-type="task">• Tarea</button>
+            <button class="btn type-btn" data-type="priority">★ Prioridad</button>
+            <button class="btn type-btn" data-type="event">○ Evento</button>
+            <button class="btn type-btn" data-type="note">— Nota</button>
+        </div>
+        <div class="inline-form">
+            <label>📅 Vence:</label>
+            <input type="datetime-local" id="dueDateTime" style="width: auto; flex: 1;">
+            <label>⏰ Alarma:</label>
+            <input type="checkbox" id="setAlarm" checked>
+        </div>
+        <div class="inline-form">
+            <label>🔄 Repetir:</label>
+            <select id="repeatType">
+                <option value="none">No repetir</option>
+                <option value="daily">Cada día</option>
+                <option value="weekly">Cada semana (mismo día)</option>
+                <option value="monthly">Cada mes (misma fecha)</option>
+                <option value="custom">Cada X días</option>
+                <option value="weekday">Día de la semana</option>
+                <option value="nth_weekday">Día específico del mes</option>
+            </select>
+        </div>
+        <div id="advancedRepeatOptions" class="advanced-options">
+            <div id="customDays" style="display:none;">
+                <label>Cada:</label>
+                <input type="number" id="repeatInterval" value="1" min="1" max="365" style="width:80px;"> días
+            </div>
+            <div id="weekdayOptions" style="display:none;">
+                <label>Día:</label>
+                <select id="weekdaySelect">
+                    <option value="1">Lunes</option>
+                    <option value="2">Martes</option>
+                    <option value="3">Miércoles</option>
+                    <option value="4">Jueves</option>
+                    <option value="5">Viernes</option>
+                    <option value="6">Sábado</option>
+                    <option value="0">Domingo</option>
+                </select>
+                <label>Semana del mes:</label>
+                <select id="nthWeekSelect" style="display:none;">
+                    <option value="1">Primer</option>
+                    <option value="2">Segundo</option>
+                    <option value="3">Tercer</option>
+                    <option value="4">Cuarto</option>
+                    <option value="-1">Último</option>
+                </select>
+            </div>
+        </div>
+        <button id="addEntryBtn" style="width:100%; margin-top:0.5rem;">➕ Agregar entrada</button>
+    </div>
+    <div id="dailyEntries" class="card"></div>
+</div>
+
+<!-- MENSUAL (sin cambios) -->
+<div id="monthlyView" class="view">
+    <div class="card">
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:1rem;">
+            <button id="prevMonth">◀</button>
+            <span id="monthLabel" style="flex:1; text-align:center; font-weight:bold;"></span>
+            <button id="nextMonth">▶</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+    <div id="monthlyTasks" class="card"></div>
+</div>
+
+<!-- FUTURO (sin cambios) -->
+<div id="futureView" class="view">
+    <div class="card">
+        <input type="text" id="futureText" placeholder="Ej: En marzo: renovar pasaporte">
+        <input type="month" id="futureMonth">
+        <button id="addFutureBtn">➕ Agregar al registro futuro</button>
+    </div>
+    <div id="futureEntries" class="card"></div>
+</div>
+
+<!-- PAGOS (NUEVA SECCIÓN) -->
+<div id="paymentsView" class="view">
+    <div class="card">
+        <h3>💳 Agregar pago</h3>
+        <input type="text" id="paymentName" placeholder="Nombre del pago (ej: Alquiler, Luz, Internet)">
+        <div style="display:flex; gap:0.5rem;">
+            <input type="number" id="paymentAmount" placeholder="Monto" step="0.01" style="flex:1;">
+            <input type="date" id="paymentDueDate" style="flex:1;">
+        </div>
+        <div class="inline-form">
+            <label>🔄 Repetir:</label>
+            <select id="paymentRepeat">
+                <option value="none">Pago único</option>
+                <option value="monthly">Mensual (misma fecha)</option>
+                <option value="yearly">Anual (misma fecha)</option>
+            </select>
+            <label>⏰ Alarma:</label>
+            <input type="checkbox" id="paymentAlarm" checked>
+        </div>
+        <button id="addPaymentBtn" style="width:100%;">➕ Agregar pago</button>
+    </div>
+    
+    <div class="card">
+        <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:1rem;">
+            <button id="prevPaymentMonth">◀</button>
+            <span id="paymentMonthLabel" style="flex:1; text-align:center; font-weight:bold;"></span>
+            <button id="nextPaymentMonth">▶</button>
+        </div>
+        <div class="payment-summary" id="paymentSummary"></div>
+        <div id="paymentsList"></div>
+    </div>
+</div>
+
+<!-- HÁBITOS (sin cambios) -->
+<div id="habitsView" class="view">
+    <div class="card">
+        <input type="text" id="newHabit" placeholder="Nuevo hábito (ej: Leer 30 min)">
+        <button id="addHabitBtn">➕ Agregar hábito</button>
+    </div>
+    <div id="habitsList" class="card"></div>
+</div>
+
+<!-- COLECCIONES (sin cambios) -->
+<div id="collectionsView" class="view">
+    <div class="card">
+        <input type="text" id="newCollectionName" placeholder="Nombre de la colección (ej: Libros leídos)">
+        <button id="addCollectionBtn">➕ Crear colección</button>
+    </div>
+    <div id="collectionsList"></div>
+</div>
+
+<div class="footer">Tus datos se guardan localmente y pueden respaldarse en la nube</div>
+
+<script>
+    // ========== DATOS ==========
+    const STORAGE = 'bujo_alarmas';
+    let data = {
+        daily: {},
+        habits: [],
+        collections: [],
+        future: [],
+        payments: [],
+        alarmQueue: []
+    };
+    let alarmTimers = {};
+
+    function load() {
+        const raw = localStorage.getItem(STORAGE);
+        if (raw) data = JSON.parse(raw);
+        if (!data.payments) data.payments = [];
+        migratePendingTasks();
+        generateRecurringTasks();
+        generateRecurringPayments();
+    }
+    function save() {
+        localStorage.setItem(STORAGE, JSON.stringify(data));
+        setupAllAlarms();
+    }
+
+    function migratePendingTasks() {
+        const today = new Date().toISOString().split('T')[0];
+        let migrated = false;
+        for (const date in data.daily) {
+            if (date < today) {
+                const tasks = data.daily[date].filter(e => (e.type === 'task' || e.type === 'priority') && !e.done && !e.migrated && !e.recurring);
+                if (tasks.length > 0) {
+                    if (!data.daily[today]) data.daily[today] = [];
+                    tasks.forEach(t => {
+                        t.migrated = true;
+                        t.migratedTo = today;
+                        const newTask = { ...t, id: Date.now() + Math.random(), done: false, migrated: false };
+                        delete newTask.migratedTo;
+                        data.daily[today].push(newTask);
+                    });
+                    migrated = true;
+                }
+            }
+        }
+        if (migrated) save();
+    }
+
+    function generateRecurringTasks() {
+        const today = new Date().toISOString().split('T')[0];
+        let generated = false;
+        
+        for (const date in data.daily) {
+            data.daily[date].forEach(entry => {
+                if (entry.recurring && entry.recurring !== 'none' && !entry.done && !entry.migrated) {
+                    const lastDate = entry.lastGenerated || date;
+                    const nextDate = calculateNextRecurringDate(lastDate, entry);
+                    
+                    if (nextDate && nextDate <= today && !entryAlreadyExists(entry, nextDate)) {
+                        if (!data.daily[nextDate]) data.daily[nextDate] = [];
+                        const newEntry = {
+                            ...entry,
+                            id: Date.now() + Math.random(),
+                            date: nextDate,
+                            done: false,
+                            migrated: false,
+                            alarmFired: false,
+                            lastGenerated: nextDate,
+                            parentId: entry.id
+                        };
+                        data.daily[nextDate].push(newEntry);
+                        entry.lastGenerated = nextDate;
+                        generated = true;
+                    }
+                }
+            });
+        }
+        
+        if (generated) save();
+    }
+
+    function generateRecurringPayments() {
+        const today = new Date().toISOString().split('T')[0];
+        let generated = false;
+        
+        data.payments.forEach(payment => {
+            if (payment.recurring && payment.recurring !== 'none' && payment.lastGenerated) {
+                const lastDate = payment.lastGenerated;
+                let nextDate = calculateNextPaymentDate(lastDate, payment);
+                
+                while (nextDate && nextDate <= today) {
+                    if (!paymentAlreadyExists(payment, nextDate)) {
+                        const newPayment = {
+                            ...payment,
+                            id: Date.now() + Math.random(),
+                            dueDate: nextDate,
+                            paid: false,
+                            lastGenerated: nextDate,
+                            parentId: payment.id
+                        };
+                        data.payments.push(newPayment);
+                        generated = true;
+                    }
+                    payment.lastGenerated = nextDate;
+                    nextDate = calculateNextPaymentDate(nextDate, payment);
+                }
+            }
+        });
+        
+        if (generated) save();
+    }
+
+    function calculateNextPaymentDate(fromDate, payment) {
+        const from = new Date(fromDate + 'T00:00:00');
+        let next = new Date(from);
+        
+        switch(payment.recurring) {
+            case 'monthly':
+                next.setMonth(next.getMonth() + 1);
+                break;
+            case 'yearly':
+                next.setFullYear(next.getFullYear() + 1);
+                break;
+            default:
+                return null;
+        }
+        
+        return next.toISOString().split('T')[0];
+    }
+
+    function calculateNextRecurringDate(fromDate, entry) {
+        const from = new Date(fromDate + 'T00:00:00');
+        let next = new Date(from);
+        
+        switch(entry.recurring) {
+            case 'daily':
+                next.setDate(next.getDate() + 1);
+                break;
+            case 'weekly':
+                next.setDate(next.getDate() + 7);
+                break;
+            case 'monthly':
+                next.setMonth(next.getMonth() + 1);
+                break;
+            case 'custom':
+                next.setDate(next.getDate() + (entry.recurringInterval || 1));
+                break;
+            case 'weekday':
+                const targetDay = entry.recurringWeekday || 1;
+                next.setDate(next.getDate() + 1);
+                while (next.getDay() !== targetDay) {
+                    next.setDate(next.getDate() + 1);
+                }
+                break;
+            case 'nth_weekday':
+                const nthWeekday = entry.recurringWeekday || 1;
+                const nthWeek = entry.recurringNthWeek || 1;
+                next.setDate(next.getDate() + 1);
+                next = getNthWeekdayOfMonth(next.getFullYear(), next.getMonth(), nthWeekday, nthWeek);
+                if (next <= from) {
+                    next.setMonth(next.getMonth() + 1);
+                    next = getNthWeekdayOfMonth(next.getFullYear(), next.getMonth(), nthWeekday, nthWeek);
+                }
+                break;
+            default:
+                return null;
+        }
+        
+        return next.toISOString().split('T')[0];
+    }
+
+    function getNthWeekdayOfMonth(year, month, weekday, nth) {
+        const date = new Date(year, month, 1);
+        let count = 0;
+        let lastMatch = null;
+        
+        while (date.getMonth() === month) {
+            if (date.getDay() === weekday) {
+                count++;
+                lastMatch = new Date(date);
+                if (count === nth && nth > 0) return new Date(date);
+            }
+            date.setDate(date.getDate() + 1);
+        }
+        
+        if (nth === -1) return lastMatch;
+        return null;
+    }
+
+    function entryAlreadyExists(entry, date) {
+        if (!data.daily[date]) return false;
+        return data.daily[date].some(e => 
+            e.text === entry.text && 
+            e.type === entry.type && 
+            e.recurring === entry.recurring &&
+            (e.parentId === entry.id || e.parentId === entry.parentId)
+        );
+    }
+
+    function paymentAlreadyExists(payment, date) {
+        return data.payments.some(p => 
+            p.name === payment.name && 
+            p.dueDate === date && 
+            (p.parentId === payment.id || p.parentId === payment.parentId)
+        );
+    }
+
+    load();
+    requestNotificationPermission();
+
+    // ========== NUBE (JSONBin.io) ==========
+    function getCloudConfig() {
+        return {
+            apiKey: localStorage.getItem('cloud_apiKey') || '',
+            binId: localStorage.getItem('cloud_binId') || ''
+        };
+    }
+    function saveCloudConfig(apiKey, binId) {
+        localStorage.setItem('cloud_apiKey', apiKey);
+        localStorage.setItem('cloud_binId', binId);
+    }
+
+    async function uploadToCloud() {
+        const { apiKey, binId } = getCloudConfig();
+        if (!apiKey || !binId) { alert('Configura primero tu nube (⚙️).'); return; }
+        try {
+            const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+                method: 'PUT',
+                headers: {
+                    'X-Master-Key': apiKey,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                localStorage.setItem('cloud_lastSync', new Date().toISOString());
+                document.getElementById('cloudStatus').textContent = '✅ Última copia: ' + new Date().toLocaleString();
+                toast('Datos subidos a la nube ☁️');
+            } else {
+                throw new Error('Error al subir');
+            }
+        } catch (e) {
+            alert('No se pudo subir a la nube. Revisa tu conexión y las credenciales.');
+        }
+    }
+
+    async function downloadFromCloud() {
+        const { apiKey, binId } = getCloudConfig();
+        if (!apiKey || !binId) { alert('Configura primero tu nube (⚙️).'); return; }
+        if (!confirm('¿Quieres reemplazar tus datos locales con la copia de la nube? Se perderán los cambios no guardados.')) return;
+        try {
+            const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+                headers: { 'X-Master-Key': apiKey }
+            });
+            if (response.ok) {
+                const result = await response.json();
+                data = result.record;
+                save();
+                localStorage.setItem('cloud_lastSync', new Date().toISOString());
+                document.getElementById('cloudStatus').textContent = '✅ Última descarga: ' + new Date().toLocaleString();
+                toast('Datos descargados de la nube ☁️');
+                location.reload();
+            } else {
+                throw new Error('Error al descargar');
+            }
+        } catch (e) {
+            alert('No se pudo descargar de la nube. Revisa tu conexión y las credenciales.');
+        }
+    }
+
+    // ========== INTERFAZ DE CONFIGURACIÓN ==========
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+        const cfg = getCloudConfig();
+        document.getElementById('apiKeyInput').value = cfg.apiKey;
+        document.getElementById('binIdInput').value = cfg.binId;
+        document.getElementById('cloudStatus').textContent = localStorage.getItem('cloud_lastSync') 
+            ? 'Última sincronización: ' + new Date(localStorage.getItem('cloud_lastSync')).toLocaleString()
+            : '';
+        document.getElementById('settingsModal').classList.add('open');
+    });
+    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+        document.getElementById('settingsModal').classList.remove('open');
+    });
+    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const binId = document.getElementById('binIdInput').value.trim();
+        if (!apiKey || !binId) { alert('Ambos campos son necesarios.'); return; }
+        saveCloudConfig(apiKey, binId);
+        document.getElementById('settingsModal').classList.remove('open');
+        toast('Configuración de nube guardada ⚙️');
+    });
+
+    document.getElementById('cloudUpBtn').addEventListener('click', uploadToCloud);
+    document.getElementById('cloudDownBtn').addEventListener('click', downloadFromCloud);
+
+    // ========== NOTIFICACIONES Y ALARMAS ==========
+    async function requestNotificationPermission() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') toast('🔔 Notificaciones activadas');
+        }
+    }
+
+    function setupAllAlarms() {
+        Object.values(alarmTimers).forEach(t => clearTimeout(t));
+        alarmTimers = {};
+        if (!('Notification' in window)) return;
+        const now = new Date().getTime();
+        for (const date in data.daily) {
+            data.daily[date].forEach(entry => {
+                if (entry.dueDateTime && entry.alarm && !entry.done && !entry.alarmFired) {
+                    const dueTime = new Date(entry.dueDateTime).getTime();
+                    const delay = dueTime - now;
+                    if (delay > 0) {
+                        alarmTimers[entry.id] = setTimeout(() => triggerAlarm(entry, date), delay);
+                    } else if (delay <= 0 && !entry.alarmFired) {
+                        triggerAlarm(entry, date);
+                    }
+                }
+            });
+        }
+        // Alarmas de pagos
+        data.payments.forEach(payment => {
+            if (payment.alarm && !payment.paid && !payment.alarmFired && payment.dueDate) {
+                const dueTime = new Date(payment.dueDate + 'T09:00:00').getTime();
+                const delay = dueTime - now;
+                if (delay > 0) {
+                    alarmTimers['payment_' + payment.id] = setTimeout(() => triggerPaymentAlarm(payment), delay);
+                } else if (delay <= 0 && !payment.alarmFired) {
+                    triggerPaymentAlarm(payment);
+                }
+            }
+        });
+    }
+
+    function triggerAlarm(entry, date) {
+        if (entry.alarmFired) return;
+        entry.alarmFired = true;
+        save();
+        if ('Notification' in window && Notification.permission === 'granted') {
+            const notification = new Notification('⏰ Recordatorio Bullet Journal', {
+                body: entry.text,
+                icon: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#6f42c1"/><text x="96" y="120" font-size="96" text-anchor="middle" fill="white">⏰</text></svg>'),
+                tag: 'bujo-alarm',
+                requireInteraction: true,
+                vibrate: [200, 100, 200]
+            });
+            notification.onclick = () => {
+                window.focus();
+                selectedDate.value = date;
+                document.querySelector('nav button[data-view="daily"]').click();
+            };
+        }
+        playAlarmSound();
+        toast('🔔 ¡Alarma! ' + entry.text.substring(0, 50));
+        if (document.getElementById('dailyView').classList.contains('active')) renderDaily();
+    }
+
+    function triggerPaymentAlarm(payment) {
+        if (payment.alarmFired) return;
+        payment.alarmFired = true;
+        save();
+        if ('
