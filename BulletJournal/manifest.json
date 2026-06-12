@@ -1,0 +1,123 @@
+{
+    "name": "Bullet Journal para Tablet",
+    "short_name": "BuJo Tablet",
+    "description": "Aplicación de Bullet Journal optimizada para tablet, con soporte para Apple Pencil y multitarea",
+    "start_url": "/?utm_source=pwa",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#f5f5f7",
+    "theme_color": "#6c5ce7",
+    "scope": "/",
+    "lang": "es",
+    "categories": ["productivity", "utilities", "lifestyle"],
+    
+    "icons": [
+        {
+            "src": "icons/icon-48.png",
+            "sizes": "48x48",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/icon-72.png",
+            "sizes": "72x72",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/icon-96.png",
+            "sizes": "96x96",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/icon-144.png",
+            "sizes": "144x144",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/icon-152.png",
+            "sizes": "152x152",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/icon-167.png",
+            "sizes": "167x167",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/icon-180.png",
+            "sizes": "180x180",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    
+    "screenshots": [
+        {
+            "src": "screenshots/tablet-landscape.png",
+            "sizes": "2048x1536",
+            "type": "image/png",
+            "form_factor": "wide"
+        },
+        {
+            "src": "screenshots/tablet-portrait.png",
+            "sizes": "1536x2048",
+            "type": "image/png",
+            "form_factor": "narrow"
+        }
+    ],
+    
+    "shortcuts": [
+        {
+            "name": "Nueva tarea",
+            "short_name": "Tarea",
+            "description": "Agregar una tarea rápida",
+            "url": "/?action=new-task",
+            "icons": [{ "src": "icons/task.png", "sizes": "96x96" }]
+        },
+        {
+            "name": "Registro diario",
+            "short_name": "Diario",
+            "description": "Ir al registro diario",
+            "url": "/?view=daily",
+            "icons": [{ "src": "icons/daily.png", "sizes": "96x96" }]
+        }
+    ],
+    
+    "share_target": {
+        "action": "/share",
+        "method": "POST",
+        "enctype": "multipart/form-data",
+        "params": {
+            "title": "name",
+            "text": "description",
+            "url": "link",
+            "files": [
+                {
+                    "name": "attachments",
+                    "accept": ["image/*"]
+                }
+            ]
+        }
+    },
+    
+    "related_applications": [],
+    "prefer_related_applications": false,
+    
+    "display_override": ["window-controls-overlay", "standalone"],
+    "edge_side_panel": {
+        "preferred_width": 400
+    }
+}
